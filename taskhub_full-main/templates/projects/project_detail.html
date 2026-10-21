@@ -1,0 +1,102 @@
+{% extends "base.html" %}{% block title %}{{ project.name }} · TaskHub{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <h2>{{ project.name }}
+    <span class="badge fs-6 {% if project.status == 'closed' %}bg-secondary{% elif project.status == 'closure_requested' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{ project.get_status_display }}</span></h2>
+  <a href="{% url 'project_list' %}" class="btn btn-outline-secondary btn-sm">← All projects</a>
+</div>
+<div class="progress mb-3"><div class="progress-bar" style="width: {{ project.percent_complete }}%">{{ project.percent_complete }}% complete</div></div>
+
+{% if project.status == 'closure_requested' %}
+  <div class="alert alert-warning">Closure has been requested. The project is <strong>read-only</strong> until faculty responds.
+    {% if is_project_faculty or user.is_admin_role %}
+    <div class="mt-2 d-flex gap-2">
+      <form method="post" action="{% url 'project_status' project.pk %}">{% csrf_token %}<input type="hidden" name="action" value="approve_closure"><button class="btn btn-success btn-sm">Approve closure</button></form>
+      <form method="post" action="{% url 'project_status' project.pk %}">{% csrf_token %}<input type="hidden" name="action" value="deny_closure"><button class="btn btn-outline-danger btn-sm">Deny (back to In Progress)</button></form>
+    </div>{% endif %}
+  </div>
+{% elif project.status == 'closed' %}
+  <div class="alert alert-secondary d-flex justify-content-between align-items-center">This project is closed and <strong>read-only</strong>.
+    {% if lead_or_admin %}<form method="post" action="{% url 'project_status' project.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reopen"><button class="btn btn-outline-primary btn-sm">Reopen project</button></form>{% endif %}
+  </div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if tab == 'details' %}active{% endif %}" href="?tab=details">Project detail</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'tasks' %}active{% endif %}" href="?tab=tasks">Tasks <span class="badge bg-secondary">{{ tab_counts.tasks }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'comments' %}active{% endif %}" href="?tab=comments">Comments <span class="badge bg-secondary">{{ tab_counts.comments }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'documents' %}active{% endif %}" href="?tab=documents">Documents <span class="badge bg-secondary">{{ tab_counts.documents }}</span></a></li>
+</ul>
+
+{% if tab == 'details' %}
+<div class="row">
+  <div class="col-md-7">
+    <p style="white-space: pre-wrap">{{ project.description|default:"No description." }}</p>
+    <p class="text-muted">Lead: <strong>{{ project.project_lead.display_name }}</strong> · Faculty: <strong>{{ project.faculty.display_name }}</strong> · Due: <strong>{{ project.due_date|date:"d M Y" }}</strong></p>
+    <div class="d-flex flex-wrap gap-2">
+      {% if can_manage %}<a href="{% url 'project_edit' project.pk %}" class="btn btn-outline-primary btn-sm">Edit project</a>{% endif %}
+      {% if lead_or_admin and project.status == 'in_progress' %}
+        <form method="post" action="{% url 'project_status' project.pk %}">{% csrf_token %}
+          {% if project.percent_complete >= 100 %}<input type="hidden" name="action" value="close"><button class="btn btn-success btn-sm">Close project</button>
+          {% else %}<input type="hidden" name="action" value="request_closure"><button class="btn btn-warning btn-sm" onclick="return confirm('Request closure at {{ project.percent_complete }}% complete? The project becomes read-only until faculty responds.')">Request closure</button>{% endif %}
+        </form>{% endif %}
+      {% if can_manage %}
+        <form method="post" action="{% url 'project_delete' project.pk %}">{% csrf_token %}<button class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this project and everything in it? This cannot be undone.')">Delete project</button></form>{% endif %}
+    </div>
+  </div>
+  <div class="col-md-5">
+    <h5>Team</h5>
+    <ul class="list-group mb-3">
+      {% for m in members %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ m.user.display_name }} {% if m.is_lead %}<span class="badge bg-primary">Lead</span>{% endif %}</span>
+          {% if can_manage and not m.is_lead %}<form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">{% csrf_token %}<button class="btn btn-link btn-sm text-danger p-0">remove</button></form>{% endif %}
+        </li>{% endfor %}
+    </ul>
+    {% if add_member_form %}
+    <form method="post" action="{% url 'member_add' project.pk %}" class="tf-form">{% csrf_token %}
+      {{ add_member_form.user }}<button class="btn btn-sm btn-outline-primary mt-2">Add member</button></form>{% endif %}
+  </div>
+</div>
+
+{% elif tab == 'tasks' %}
+  {% if can_manage %}<a href="{% url 'task_create' project.pk %}" class="btn btn-success btn-sm mb-3">+ New Task</a>{% endif %}
+  <div class="table-responsive"><table class="table bg-white align-middle">
+    <thead><tr><th>ID</th><th>Task</th><th>Assigned</th><th>Due</th><th>Weight</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for t in tasks %}
+      <tr><td>{{ t.display_id }}</td>
+        <td><a href="{% url 'task_detail' t.pk %}">{{ t.title }}</a>{% if t.subtasks.all %} <small class="text-muted">({{ t.subtasks.all|length }} sub-tasks)</small>{% endif %}</td>
+        <td>{% for u in t.assigned_to.all %}{{ u.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">unassigned</span>{% endfor %}</td>
+        <td>{% if t.due_date %}<span class="{% if t.is_overdue %}text-danger fw-bold{% endif %}">{{ t.due_date|date:"d M Y" }}</span>{% else %}—{% endif %}</td>
+        <td>{{ t.percent_contribution|floatformat:"-1" }}%</td>
+        <td><span class="badge {% if t.status == 'completed' %}bg-success{% elif t.status == 'in_progress' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{{ t.get_status_display }}</span></td></tr>
+    {% empty %}<tr><td colspan="6" class="text-muted">No tasks yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+
+{% elif tab == 'comments' %}
+  {% url 'comment_add' project.pk as post_url %}
+  {% include "projects/_comments.html" with post_url=post_url %}
+
+{% else %}
+  {% if can_contribute %}
+  <form method="post" action="{% url 'document_upload' project.pk %}" enctype="multipart/form-data" class="tf-form card card-body mb-3">{% csrf_token %}
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label">Title</label>{{ document_form.title }}</div>
+      <div class="col-md-5"><label class="form-label">File (max 5 MB)</label>{{ document_form.file }}</div>
+      <div class="col-md-3"><button class="btn btn-primary w-100">Upload</button></div>
+    </div></form>
+  {% endif %}
+  <div class="table-responsive"><table class="table bg-white align-middle">
+    <thead><tr><th>Title</th><th>File</th><th>Size</th><th>Uploaded by</th><th>On</th><th></th></tr></thead>
+    <tbody>
+    {% for d in documents %}
+      <tr><td>{{ d.title }}</td><td>{{ d.filename }}</td><td>{{ d.size|filesizeformat }}</td>
+        <td>{{ d.uploaded_by.display_name }}</td><td>{{ d.uploaded_at|date:"d M Y" }}</td>
+        <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'document_download' d.pk %}">Download</a>
+          {% if can_contribute and user == d.uploaded_by or can_contribute and lead_or_admin %}
+          <form method="post" action="{% url 'document_delete' d.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">Delete</button></form>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="text-muted">No documents yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+{% endif %}
+{% endblock %}

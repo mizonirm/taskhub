@@ -1,0 +1,18 @@
+{# expects: comments, comment_form, post_url, can_contribute, lead_or_admin #}
+{% for c in comments %}
+  <div class="comment mb-3">
+    <div class="d-flex justify-content-between">
+      <strong>{{ c.author.display_name }}</strong>
+      <small class="text-muted">{{ c.created_at|date:"d M Y, H:i" }}
+        {% if can_contribute and user == c.author or can_contribute and lead_or_admin %}
+          <form method="post" action="{% url 'comment_delete' c.pk %}" class="d-inline">{% csrf_token %}
+            <button class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="return confirm('Delete this comment?')">delete</button></form>
+        {% endif %}</small>
+    </div>
+    <div style="white-space: pre-wrap">{{ c.body }}</div>
+  </div>
+{% empty %}<p class="text-muted">No comments yet.</p>{% endfor %}
+{% if can_contribute %}
+  <form method="post" action="{{ post_url }}" class="tf-form mt-3">{% csrf_token %}{{ comment_form.body }}
+    <button class="btn btn-primary btn-sm mt-2">Add comment</button></form>
+{% else %}<p class="text-muted small">This project is read-only — commenting is disabled.</p>{% endif %}

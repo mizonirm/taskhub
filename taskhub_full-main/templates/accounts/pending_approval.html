@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Awaiting approval · TaskHub{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-6">
+  <div class="alert alert-success">Your email <strong>{{ pending_user.email }}</strong> is verified.</div>
+  <h2>Waiting for admin approval</h2>
+  <p>Faculty accounts can approve projects, so an administrator has to confirm each one.
+     You'll be able to log in as soon as yours is approved.</p>
+  <a class="btn btn-outline-primary" href="{% url 'login' %}">Back to log in</a>
+</div></div>
+{% endblock %}

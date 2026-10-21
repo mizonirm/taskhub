@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Projects · TaskHub{% endblock %}
+{% block content %}
+<h2>Projects</h2>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if tab == 'all' %}active{% endif %}" href="?tab=all">All <span class="badge bg-secondary">{{ counts.all }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'active' %}active{% endif %}" href="?tab=active">Active <span class="badge bg-secondary">{{ counts.active }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'upcoming' %}active{% endif %}" href="?tab=upcoming" title="Active projects due within {{ upcoming_days }} days">Upcoming <span class="badge bg-secondary">{{ counts.upcoming }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'closed' %}active{% endif %}" href="?tab=closed">Closed <span class="badge bg-secondary">{{ counts.closed }}</span></a></li>
+</ul>
+<div class="table-responsive"><table class="table bg-white align-middle">
+  <thead><tr><th>Name</th><th>Lead</th><th>Faculty</th><th>Due</th><th>Status</th><th style="min-width:140px">Progress</th></tr></thead>
+  <tbody>
+  {% for p in projects %}
+    <tr><td><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a></td>
+      <td>{{ p.project_lead.display_name }}</td><td>{{ p.faculty.display_name }}</td>
+      <td>{{ p.due_date|date:"d M Y" }}</td>
+      <td><span class="badge {% if p.status == 'closed' %}bg-secondary{% elif p.status == 'closure_requested' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{ p.get_status_display }}</span></td>
+      <td><div class="progress"><div class="progress-bar" style="width: {{ p.percent_complete }}%">{{ p.percent_complete }}%</div></div></td></tr>
+  {% empty %}<tr><td colspan="6" class="text-muted">No projects in this tab.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

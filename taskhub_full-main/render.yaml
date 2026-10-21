@@ -1,0 +1,37 @@
+# Render "Blueprint". Uses an external Postgres (e.g. Neon) via DATABASE_URL,
+# because Render's free Postgres is deleted after 30 days.
+services:
+  - type: web
+    name: taskhub
+    runtime: python
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: gunicorn taskhub_project.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false        # paste your Postgres connection string in the Render dashboard
+      - key: DEMO_MODE
+        value: "True"      # showcase deployment: sample data + demo logins. Set to False for real users.
+      - key: ALLOWED_EMAIL_DOMAINS
+        sync: false        # e.g. youruniversity.edu  (leave empty to allow any email)
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: EMAIL_HOST
+        sync: false        # e.g. smtp-relay.brevo.com
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false

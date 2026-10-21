@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block title %}{{ task.display_id }} · TaskHub{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{% url 'project_detail' project.pk %}?tab=tasks">{{ project.name }}</a></li>
+  {% if task.parent %}<li class="breadcrumb-item"><a href="{% url 'task_detail' task.parent.pk %}?tab=subtasks">{{ task.parent.display_id }}</a></li>{% endif %}
+  <li class="breadcrumb-item active">{{ task.display_id }}</li></ol></nav>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+  <h2>{{ task.display_id }} — {{ task.title }}
+    <span class="badge fs-6 {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_progress' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{{ task.get_status_display }}</span></h2>
+  {% if can_manage %}<div class="d-flex gap-2">
+    <a href="{% url 'task_edit' task.pk %}" class="btn btn-outline-primary btn-sm">Edit</a>
+    <form method="post" action="{% url 'task_delete' task.pk %}">{% csrf_token %}<button class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this task{% if not task.parent %} and its sub-tasks{% endif %}?')">Delete</button></form></div>{% endif %}
+</div>
+
+{% if can_update %}
+<form method="post" action="{% url 'task_status' task.pk %}" class="tf-form d-flex align-items-center gap-2 mb-3" style="max-width:340px">{% csrf_token %}
+  <label class="text-nowrap fw-semibold">Update status:</label>
+  <select name="status" onchange="this.form.submit()">
+    {% for value, label in task.STATUS_CHOICES %}<option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select></form>
+{% endif %}
+{% if unmet %}<div class="alert alert-warning py-2">Blocked by unfinished dependencies: {% for d in unmet %}<a href="{% url 'task_detail' d.pk %}">{{ d.display_id }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if tab == 'details' %}active{% endif %}" href="?tab=details">Task detail</a></li>
+  {% if not task.parent %}<li class="nav-item"><a class="nav-link {% if tab == 'subtasks' %}active{% endif %}" href="?tab=subtasks">Sub-tasks <span class="badge bg-secondary">{{ subtasks|length }}</span></a></li>{% endif %}
+  <li class="nav-item"><a class="nav-link {% if tab == 'comments' %}active{% endif %}" href="?tab=comments">Comments <span class="badge bg-secondary">{{ comments|length }}</span></a></li>
+</ul>
+
+{% if tab == 'details' %}
+  <p style="white-space: pre-wrap">{{ task.description|default:"No description." }}</p>
+  <dl class="row">
+    <dt class="col-sm-3">Due date</dt><dd class="col-sm-9">{% if task.due_date %}<span class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">{{ task.due_date|date:"d M Y" }}{% if task.is_overdue %} (overdue){% endif %}</span>{% else %}—{% endif %}</dd>
+    {% if not task.parent %}<dt class="col-sm-3">Weight</dt><dd class="col-sm-9">{{ task.percent_contribution|floatformat:"-1" }}% of project</dd>{% endif %}
+    <dt class="col-sm-3">Assigned to</dt><dd class="col-sm-9">{% for u in task.assigned_to.all %}{{ u.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}unassigned{% endfor %}</dd>
+    <dt class="col-sm-3">Depends on</dt><dd class="col-sm-9">{% for d in task.depends_on.all %}<a href="{% url 'task_detail' d.pk %}">{{ d.display_id }}</a> ({{ d.get_status_display }}){% if not forloop.last %}, {% endif %}{% empty %}none{% endfor %}</dd>
+  </dl>
+{% elif tab == 'subtasks' %}
+  {% if can_manage and not task.parent %}<a href="{% url 'subtask_create' project.pk task.pk %}" class="btn btn-success btn-sm mb-3">+ New Sub-task</a>{% endif %}
+  <ul class="list-group">
+    {% for s in subtasks %}<li class="list-group-item d-flex justify-content-between">
+      <span><a href="{% url 'task_detail' s.pk %}">{{ s.display_id }} — {{ s.title }}</a>
+        <small class="text-muted">{% for u in s.assigned_to.all %}{% if forloop.first %} · {% endif %}{{ u.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</small></span>
+      <span class="badge {% if s.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">{{ s.get_status_display }}</span></li>
+    {% empty %}<li class="list-group-item text-muted">No sub-tasks.</li>{% endfor %}
+  </ul>
+{% else %}
+  {% url 'task_comment_add' project.pk task.pk as post_url %}
+  {% include "projects/_comments.html" with post_url=post_url %}
+{% endif %}
+{% endblock %}

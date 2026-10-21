@@ -1,0 +1,74 @@
+{% extends "base.html" %}{% block title %}Dashboard · TaskHub{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Welcome, {{ user.display_name }}</h2>
+  {% if user.role == "member" %}<a href="{% url 'request_project' %}" class="btn btn-success">+ New Project Request</a>{% endif %}
+</div>
+
+<div class="row">
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header d-flex justify-content-between"><span>My Notifications</span>
+      <a href="{% url 'notifications' %}" class="small">View all</a></div>
+    <ul class="list-group list-group-flush">
+      {% for n in notifications %}
+        <a class="list-group-item list-group-item-action" href="{% url 'notification_open' n.pk %}">
+          {{ n.message }}<br><small class="text-muted">{{ n.created_at|timesince }} ago</small></a>
+      {% empty %}<li class="list-group-item text-muted">No new notifications.</li>{% endfor %}
+    </ul></div></div>
+
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header">My Active Projects</div>
+    <ul class="list-group list-group-flush">
+      {% for p in active_projects %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between"><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a>
+            <small class="text-muted">due {{ p.due_date|date:"d M Y" }}</small></div>
+          <div class="progress mt-1"><div class="progress-bar" style="width: {{ p.percent_complete }}%">{{ p.percent_complete }}%</div></div>
+        </li>
+      {% empty %}<li class="list-group-item text-muted">None yet.</li>{% endfor %}
+    </ul></div></div>
+
+  {% if user.role == "member" %}
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header">My Tasks</div>
+    <ul class="list-group list-group-flush">
+      {% for t in my_tasks %}
+        <li class="list-group-item d-flex justify-content-between">
+          <span><a href="{% url 'task_detail' t.pk %}">{{ t.display_id }} — {{ t.title }}</a><br>
+            <small class="text-muted">{{ t.project.name }}{% if t.due_date %} · due {{ t.due_date|date:"d M Y" }}{% endif %}</small></span>
+          <span class="badge {% if t.is_overdue %}bg-danger{% else %}bg-info text-dark{% endif %} align-self-start">{% if t.is_overdue %}Overdue{% else %}{{ t.get_status_display }}{% endif %}</span>
+        </li>
+      {% empty %}<li class="list-group-item text-muted">Nothing assigned.</li>{% endfor %}
+    </ul></div></div>
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header">My Project Requests (open)</div>
+    <ul class="list-group list-group-flush">
+      {% for r in my_requests %}<li class="list-group-item">{{ r.name }} <small class="text-muted">— awaiting {{ r.faculty.display_name }}</small></li>
+      {% empty %}<li class="list-group-item text-muted">None pending.</li>{% endfor %}
+    </ul></div></div>
+  {% endif %}
+
+  {% if user.role == "faculty" or user.is_admin_role %}
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header">Project Requests Awaiting Approval</div>
+    <ul class="list-group list-group-flush">
+      {% for r in pending_requests %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><strong>{{ r.name }}</strong><br><small class="text-muted">lead: {{ r.project_lead.display_name }} · due {{ r.due_date|date:"d M Y" }}</small></span>
+          <span class="d-flex gap-1">
+            <form method="post" action="{% url 'review_request' r.pk 'approve' %}">{% csrf_token %}<button class="btn btn-sm btn-success">Approve</button></form>
+            <form method="post" action="{% url 'review_request' r.pk 'deny' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Deny</button></form>
+          </span></li>
+      {% empty %}<li class="list-group-item text-muted">None pending.</li>{% endfor %}
+    </ul></div></div>
+  <div class="col-lg-6 mb-4"><div class="card h-100">
+    <div class="card-header">Closure Requests Awaiting Approval</div>
+    <ul class="list-group list-group-flush">
+      {% for p in closure_requests %}
+        <li class="list-group-item d-flex justify-content-between">
+          <a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a><span class="badge bg-warning text-dark">{{ p.percent_complete }}% complete</span></li>
+      {% empty %}<li class="list-group-item text-muted">None pending.</li>{% endfor %}
+    </ul></div></div>
+  {% endif %}
+</div>
+{% endblock %}

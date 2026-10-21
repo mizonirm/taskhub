@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TaskHub{% endblock %}</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .tf-form input[type=text], .tf-form input[type=email], .tf-form input[type=password],
+    .tf-form input[type=date], .tf-form input[type=number], .tf-form input[type=file],
+    .tf-form select, .tf-form textarea {
+      display:block; width:100%; padding:.375rem .75rem; border:1px solid #ced4da;
+      border-radius:.375rem; background:#fff; }
+    .tf-form select[multiple] { min-height: 7rem; }
+    .progress { height: 1.1rem; }
+    .comment { border-left: 3px solid #dee2e6; padding-left: .75rem; }
+  </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="{% url 'home' %}">TaskHub</a>
+    {% if user.is_authenticated %}
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'project_list' %}">Projects</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'notifications' %}">Notifications
+          {% if unread_count %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}</a></li>
+        {% if user.is_staff %}<li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">Admin panel</a></li>{% endif %}
+      </ul>
+      <span class="navbar-text text-white me-3">{{ user.display_name }} · {{ user.get_role_display }}</span>
+      <form method="post" action="{% url 'logout' %}" class="d-inline">{% csrf_token %}
+        <button type="submit" class="btn btn-outline-light btn-sm">Log out</button></form>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+<div class="container pb-5">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">{{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Task · TaskHub{% endblock %}
+{% block content %}
+<h2>{% if editing %}Edit {{ task.display_id }}{% elif parent %}New sub-task of {{ parent.display_id }}{% else %}New task{% endif %}
+  <small class="text-muted">— {{ project.name }}</small></h2>
+<form method="post" class="tf-form col-md-7">{% csrf_token %}{% include "_form.html" %}
+  <div class="form-text mb-3">Hold Ctrl (Cmd on Mac) to select more than one dependency or assignee.</div>
+  <button class="btn btn-primary" type="submit">Save</button>
+  <a href="{% if editing %}{% url 'task_detail' task.pk %}{% else %}{% url 'project_detail' project.pk %}?tab=tasks{% endif %}" class="btn btn-link">Cancel</a>
+</form>
+{% endblock %}

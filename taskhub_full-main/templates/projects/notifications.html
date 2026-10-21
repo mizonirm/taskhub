@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Notifications · TaskHub{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Notifications</h2>
+  <form method="post" action="{% url 'notifications_read_all' %}">{% csrf_token %}
+    <button class="btn btn-sm btn-outline-secondary">Mark all as read</button></form>
+</div>
+<div class="list-group">
+  {% for n in items %}
+    <a href="{% url 'notification_open' n.pk %}" class="list-group-item list-group-item-action {% if not n.is_read %}fw-bold bg-white{% endif %}">
+      {{ n.message }}<br><small class="text-muted fw-normal">{{ n.created_at|date:"d M Y, H:i" }}</small></a>
+  {% empty %}<div class="list-group-item text-muted">You're all caught up.</div>{% endfor %}
+</div>
+{% endblock %}

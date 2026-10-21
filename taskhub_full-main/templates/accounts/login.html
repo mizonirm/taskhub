@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block title %}Log in · TaskHub{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-5">
+  {% if demo_mode %}
+  <div class="alert alert-info">
+    <strong>Demo site.</strong> Sample data is preloaded — log in with any account below
+    (password <code>{{ demo_password }}</code>):
+    <ul class="mb-2 mt-2">
+      <li><code>demo_prof</code> — Faculty: approves requests &amp; closures, comments</li>
+      <li><code>demo_lead</code> — Project Lead: manages tasks &amp; team, closes the project</li>
+      <li><code>demo_alice</code> / <code>demo_bob</code> — Team Members: update their tasks, comment, upload files</li>
+    </ul>
+    <small>Try: open <em>Campus Events App</em> → Tasks → mark a task completed and watch the % change; as the lead,
+      press <em>Request closure</em>, then log in as <code>demo_prof</code> to approve it.
+      You can also sign up as a new user.</small>
+  </div>
+  {% endif %}
+  <h2>Log in</h2>
+  <form method="post" class="tf-form">{% csrf_token %}{% include "_form.html" %}
+    <button class="btn btn-primary" type="submit">Log in</button></form>
+  <p class="mt-3 mb-1">No account? <a href="{% url 'signup' %}">Sign up</a></p>
+  <p><a href="{% url 'verify_otp' %}">Verify your email</a></p>
+</div></div>
+{% endblock %}
